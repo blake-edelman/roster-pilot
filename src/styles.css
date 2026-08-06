@@ -35,8 +35,11 @@ svg { width: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke
 .league-switcher strong { font-size: .78rem; }
 .league-switcher small { color: var(--muted); font-size: .65rem; margin-top: .15rem; }
 .league-switcher svg { margin-left: auto; width: 14px; color: var(--muted); }
-.connection { justify-self: end; color: #a8b9b0; font: 500 .68rem 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; }
+.connection { justify-self: end; padding: .6rem .7rem; border: 1px solid transparent; background: transparent; color: #a8b9b0; font: 500 .68rem 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
+.connection:hover { border-color: var(--line); background: #0d1914; }
 .connection span { display: inline-block; width: 7px; height: 7px; margin-right: .45rem; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+.connection--error span { background: var(--red); box-shadow: 0 0 12px var(--red); }
+.connection--connecting span { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
 
 .workspace { max-width: 1520px; margin: 0 auto; padding: 2.2rem 3.5vw 4rem; }
 .clock-banner { min-height: 164px; display: grid; grid-template-columns: auto 1fr auto minmax(300px, .8fr); gap: 2rem; align-items: center; padding: 1.5rem 2rem; border: 1px solid #2b5b44; background: #0d1d16; box-shadow: inset 4px 0 var(--green), 0 20px 60px rgba(0,0,0,.18); }
@@ -139,6 +142,21 @@ svg { width: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke
 .recent li small { color: var(--muted); font-size: .56rem; margin-top: .12rem; }
 .pick-number { color: #5d7166; font: .62rem 'DM Mono', monospace; }
 .run-alert { padding: .35rem .55rem; color: var(--amber) !important; border: 1px solid #5e4824; background: #261e12; }
+
+.modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgba(2, 8, 5, .78); backdrop-filter: blur(8px); }
+.setup-modal { position: relative; width: min(460px, 100%); padding: 2rem; box-shadow: 0 28px 100px rgba(0, 0, 0, .5); }
+.setup-modal h2 { margin: .6rem 0 .4rem; font-size: 1.55rem; letter-spacing: -.04em; }
+.setup-lede { margin: 0 0 1.5rem; color: var(--muted); font-size: .75rem; line-height: 1.6; }
+.modal-close { position: absolute; right: 1rem; top: 1rem; width: 32px; height: 32px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 1.25rem; cursor: pointer; }
+.setup-modal label { display: block; margin-bottom: .45rem; color: #aebdb5; font: .62rem 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; }
+.setup-modal input { width: 100%; padding: .85rem; border: 1px solid #2b4438; outline: 0; background: #08130e; color: var(--ink); font: .78rem 'DM Mono', monospace; }
+.setup-modal input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(110, 231, 165, .1); }
+.connection-message { min-height: 1.1rem; margin: .55rem 0 .9rem; color: var(--muted); font-size: .6rem; }
+.connection-message--error { color: var(--red); }
+.setup-divider { position: relative; margin: 1.2rem 0; border-top: 1px solid var(--line); text-align: center; }
+.setup-divider span { position: relative; top: -.65rem; padding: 0 .7rem; background: var(--panel); color: #597066; font-size: .62rem; text-transform: uppercase; }
+.practice-button { width: 100%; padding: .8rem; border: 1px solid #2b4438; background: transparent; color: #aebdb5; font-size: .72rem; cursor: pointer; }
+.practice-button:hover { border-color: var(--green); color: var(--green); }
 
 @media (max-width: 1050px) {
   .clock-banner { grid-template-columns: auto 1fr auto; }

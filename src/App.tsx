@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createMockContext, initialDraftedIds, mockLeague, mockPlayers, recentPicks, userRoster } from './data/mockDraft';
 import { rankPlayers } from './engine/recommend';
 import type { Player, Position } from './engine/types';
 import { ChevronDownIcon, ClockIcon, CompassIcon, RadioIcon, SparkIcon } from './components/Icons';
+import { SleeperDraftPoller } from './live/poller';
+import type { DraftBundle } from './adapters/sleeper';
 
 type Filter = 'ALL' | Position;
 
@@ -25,6 +27,14 @@ export function App() {
   const [draftedIds, setDraftedIds] = useState(() => new Set(initialDraftedIds));
   const [roster, setRoster] = useState<Player[]>(userRoster);
   const [isOnClock, setIsOnClock] = useState(true);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [draftId, setDraftId] = useState('');
+  const [connectionState, setConnectionState] = useState<'mock' | 'connecting' | 'live' | 'error'>('mock');
+  const [connectionMessage, setConnectionMessage] = useState('Practice data');
+  const [leagueName, setLeagueName] = useState('Gridiron Masters');
+  const pollerRef = useRef<SleeperDraftPoller | null>(null);
+
+  useEffect(() => () => pollerRef.current?.stop(), []);
 
   const recommendations = useMemo(() => {
     const context = { ...createMockContext(draftedIds), roster, currentPick: isOnClock ? 13 : 14 };
@@ -61,6 +71,48 @@ export function App() {
     if (next) setSelectedId(next.player.id);
   }
 
+  function applyLiveBundle(bundle: DraftBundle) {
+    const names = new Set(bundle.picks.map((pick) => `${pick.metadata?.first_name ?? ''} ${pick.metadata?.last_name ?? ''}`.trim().toLowerCase()));
+    const matchedIds = mockPlayers.filter((player) => names.has(player.name.toLowerCase())).map((player) => player.id);
+    setDraftedIds(new Set(matchedIds));
+    setLeagueName(bundle.league?.name ?? 'Sleeper draft');
+    setConnectionState('live');
+    setConnectionMessage(`${bundle.picks.length} picks · synced just now`);
+    setIsOnClock(bundle.draft.status === 'drafting');
+  }
+
+  function connectSleeper(event: React.FormEvent) {
+    event.preventDefault();
+    const cleanId = draftId.trim();
+    if (!cleanId) return;
+    pollerRef.current?.stop();
+    setConnectionState('connecting');
+    setConnectionMessage('Connecting…');
+    const poller = new SleeperDraftPoller(cleanId, {
+      onData: (bundle) => {
+        applyLiveBundle(bundle);
+        setSetupOpen(false);
+      },
+      onError: (error, retryMs) => {
+        setConnectionState('error');
+        setConnectionMessage(`${error.message} Retrying in ${Math.round(retryMs / 1000)}s.`);
+      },
+    });
+    pollerRef.current = poller;
+    poller.start();
+  }
+
+  function usePracticeMode() {
+    pollerRef.current?.stop();
+    setDraftedIds(new Set(initialDraftedIds));
+    setRoster(userRoster);
+    setIsOnClock(true);
+    setConnectionState('mock');
+    setConnectionMessage('Practice data');
+    setLeagueName('Gridiron Masters');
+    setSetupOpen(false);
+  }
+
   return (
     <div className="app-frame">
       <header className="topbar">
@@ -71,11 +123,13 @@ export function App() {
 
         <div className="league-switcher" aria-label="Current league">
           <span className="league-avatar">GM</span>
-          <span><strong>Gridiron Masters</strong><small>10 Team · PPR</small></span>
+          <span><strong>{leagueName}</strong><small>10 Team · PPR</small></span>
           <ChevronDownIcon />
         </div>
 
-        <div className="connection"><span /> Live sync · Mock data</div>
+        <button className={`connection connection--${connectionState}`} onClick={() => setSetupOpen(true)}>
+          <span /> {connectionState === 'live' ? 'Sleeper live' : connectionState === 'error' ? 'Sync issue' : connectionState === 'connecting' ? 'Connecting' : 'Practice mode'}
+        </button>
       </header>
 
       <main id="top" className="workspace">
@@ -200,6 +254,27 @@ export function App() {
           </div>
         </section>
       </main>
+
+      {setupOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSetupOpen(false)}>
+          <section className="setup-modal panel" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+            <button className="modal-close" aria-label="Close connection setup" onClick={() => setSetupOpen(false)}>×</button>
+            <p className="section-kicker"><RadioIcon /> Draft source</p>
+            <h2 id="setup-title">Connect Roster Pilot</h2>
+            <p className="setup-lede">Sleeper’s public API is read-only. Roster Pilot watches picks, but never submits them.</p>
+            <form onSubmit={connectSleeper}>
+              <label htmlFor="draft-id">Sleeper draft ID</label>
+              <input id="draft-id" value={draftId} onChange={(event) => setDraftId(event.target.value)} placeholder="e.g. 123456789012345678" autoFocus />
+              <p className={`connection-message connection-message--${connectionState}`}>{connectionMessage}</p>
+              <button className="draft-button" type="submit" disabled={connectionState === 'connecting' || !draftId.trim()}>
+                {connectionState === 'connecting' ? 'Connecting…' : 'Connect live draft'}
+              </button>
+            </form>
+            <div className="setup-divider"><span>or</span></div>
+            <button className="practice-button" onClick={usePracticeMode}>Continue with practice draft</button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

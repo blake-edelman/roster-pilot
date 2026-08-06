@@ -21,4 +21,12 @@ describe('Roster Pilot dashboard', () => {
     const roster = screen.getByRole('heading', { name: 'Starting roster' }).closest('.panel') as HTMLElement;
     expect(within(roster).getByText('Josh Jacobs')).toBeVisible();
   });
+
+  it('opens the read-only Sleeper connection flow', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Practice mode' }));
+    expect(screen.getByRole('dialog', { name: 'Connect Roster Pilot' })).toBeVisible();
+    expect(screen.getByLabelText('Sleeper draft ID')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Connect live draft' })).toBeDisabled();
+  });
 });
