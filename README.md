@@ -9,6 +9,8 @@ pnpm install
 pnpm dev
 pnpm test
 pnpm build
+pnpm desktop
+pnpm dist:win
 ```
 
 ## Current MVP
@@ -19,5 +21,9 @@ pnpm build
 - Position filters, recent-pick context, roster tracking, and safe-to-wait callouts
 - Deterministic practice draft data with interactive pick submission
 - Responsive desktop and mobile layouts
+- Read-only Sleeper draft connection with retry/backoff and practice fallback
+- Context-isolated Electron shell and Windows x64 portable packaging
 
-The recommendation engine is independent of the UI so it can later run unchanged inside an Electron desktop shell and accept normalized Sleeper draft state.
+The recommendation engine remains independent of the UI while running unchanged inside the Electron desktop shell and accepting normalized Sleeper draft state.
+
+See [BUILD.md](BUILD.md) for desktop build and release details.

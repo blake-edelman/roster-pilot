@@ -3,10 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "description": "A live, explainable fantasy football draft assistant.",
+  "main": "electron/main.cjs",
+  "author": "Roster Pilot contributors",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "desktop": "electron .",
     "build": "tsc -b && vite build",
+    "dist:win": "pnpm build && electron-builder --win portable --x64",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -20,10 +24,34 @@
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.2",
+    "electron": "43.2.0",
+    "electron-builder": "26.15.3",
     "jsdom": "^26.1.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@11.16.0"
+  "packageManager": "pnpm@11.16.0",
+  "build": {
+    "appId": "com.rosterpilot.app",
+    "productName": "Roster Pilot",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "Roster-Pilot-${version}-Windows-${arch}.${ext}"
+    }
+  }
 }
