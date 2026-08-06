@@ -1,6 +1,6 @@
 import { canFill, marginalLineupValue } from './lineup';
 import { conditionalSurvival } from './statistics';
-import type { DraftContext, LeagueSettings, Player, Recommendation } from './types';
+import type { DraftContext, LeagueSettings, Player, Position, Recommendation } from './types';
 
 function round(value: number, places = 1): number {
   const scale = 10 ** places;
@@ -13,17 +13,38 @@ function rosterFit(player: Player, roster: Player[], league: LeagueSettings): nu
   return Math.max(0, Math.min(3, matchingSlots - matchingRoster)) * 1.5;
 }
 
+function replacementRoster(context: DraftContext, league: LeagueSettings): Player[] {
+  return league.starters.map((slot, index) => {
+    const position = slot === 'FLEX'
+      ? (['RB', 'WR', 'TE'] as Position[]).sort(
+          (left, right) => (context.replacementPoints[right] ?? 0) - (context.replacementPoints[left] ?? 0),
+        )[0]
+      : slot;
+    return {
+      id: `__replacement-${index}`,
+      name: `${position} replacement`,
+      position,
+      team: '',
+      projectedPoints: context.replacementPoints[position] ?? 0,
+    };
+  });
+}
+
 export function rankPlayers(
   players: Player[],
   context: DraftContext,
   league: LeagueSettings,
 ): Recommendation[] {
+  const baselineRoster = [...context.roster, ...replacementRoster(context, league)];
   return players
     .filter((player) => !context.draftedPlayerIds.has(player.id))
     .map((player): Recommendation => {
       const replacement = context.replacementPoints[player.position] ?? player.projectedPoints;
       const valueOverReplacement = Math.max(0, player.projectedPoints - replacement);
-      const lineupGain = marginalLineupValue(player, context.roster, league);
+      // Empty starter slots are valued against a waiver-level baseline, not
+      // zero. This keeps high raw-scoring positions such as QB from dominating
+      // simply because a draft roster is not complete yet.
+      const lineupGain = marginalLineupValue(player, baselineRoster, league);
       const survivalProbability = player.adp !== undefined
         ? conditionalSurvival(
             player.adp,
@@ -60,4 +81,3 @@ export function rankPlayers(
     })
     .sort((left, right) => right.score - left.score || right.player.projectedPoints - left.player.projectedPoints);
 }
-

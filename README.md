@@ -11,4 +11,13 @@ pnpm test
 pnpm build
 ```
 
-The first implementation milestone is a browser-testable React application. The recommendation engine is kept independent of the UI so it can later run unchanged inside an Electron desktop shell.
+## Current MVP
+
+- Flex-aware lineup optimization against position-level replacement players
+- Conditional ADP survival estimates for the next user pick
+- Explainable score components and player-specific draft guidance
+- Position filters, recent-pick context, roster tracking, and safe-to-wait callouts
+- Deterministic practice draft data with interactive pick submission
+- Responsive desktop and mobile layouts
+
+The recommendation engine is independent of the UI so it can later run unchanged inside an Electron desktop shell and accept normalized Sleeper draft state.

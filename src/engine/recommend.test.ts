@@ -30,5 +30,10 @@ describe('rankPlayers', () => {
     const steady = recommendations.find((item) => item.player.id === 'steady')!;
     expect(alpha.components.costOfWaiting).toBeGreaterThan(steady.components.costOfWaiting);
   });
-});
 
+  it('values empty starting slots against replacement rather than zero', () => {
+    const recommendations = rankPlayers(players, context, league);
+    const alpha = recommendations.find((item) => item.player.id === 'alpha')!;
+    expect(alpha.components.lineupGain).toBe(85);
+  });
+});

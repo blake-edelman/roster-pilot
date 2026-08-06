@@ -38,6 +38,20 @@ export function App() {
   const safestWait = recommendations
     .filter((item) => item.survivalProbability !== null)
     .sort((a, b) => (b.survivalProbability ?? 0) - (a.survivalProbability ?? 0))[0];
+  const rosterBySlot = useMemo(() => {
+    const assignments = new Map<number, Player>();
+    const remaining = [...roster];
+    mockLeague.starters.forEach((slot, index) => {
+      const exact = remaining.findIndex((player) => player.position === slot);
+      if (exact >= 0) assignments.set(index, remaining.splice(exact, 1)[0]);
+    });
+    mockLeague.starters.forEach((slot, index) => {
+      if (slot !== 'FLEX' || assignments.has(index)) return;
+      const flex = remaining.findIndex((player) => ['RB', 'WR', 'TE'].includes(player.position));
+      if (flex >= 0) assignments.set(index, remaining.splice(flex, 1)[0]);
+    });
+    return assignments;
+  }, [roster]);
 
   function draftPlayer(player: Player) {
     setDraftedIds((current) => new Set(current).add(player.id));
@@ -69,7 +83,7 @@ export function App() {
           <div className="clock-round"><small>ROUND</small><strong>02</strong></div>
           <div className="clock-copy">
             <span className="live-label"><RadioIcon /> {isOnClock ? 'You’re on the clock' : 'Pick recorded'}</span>
-            <h1>{isOnClock ? 'Make pick 1.03' : 'Next pick: 3.08'}</h1>
+            <h1>{isOnClock ? 'Make pick 2.03' : 'Next pick: 3.08'}</h1>
             <p>{isOnClock ? 'Your next selection is 15 picks away.' : 'Roster Pilot is watching the room.'}</p>
           </div>
           <div className="timer" aria-label="Time remaining"><ClockIcon /><strong>{isOnClock ? '1:24' : '--:--'}</strong><small>remaining</small></div>
@@ -172,7 +186,7 @@ export function App() {
             <div className="panel-header compact"><div><p className="section-kicker">Your build</p><h2>Starting roster</h2></div><span>{roster.length}/7 filled</span></div>
             <div className="roster-slots">
               {mockLeague.starters.map((slot, index) => {
-                const rostered = roster[index];
+                const rostered = rosterBySlot.get(index);
                 return <div className={rostered ? 'slot slot--filled' : 'slot'} key={`${slot}-${index}`}><small>{slot}</small><strong>{rostered?.name ?? 'Open slot'}</strong>{rostered && <span>{rostered.team} · {rostered.projectedPoints} pts</span>}</div>;
               })}
             </div>
@@ -189,4 +203,3 @@ export function App() {
     </div>
   );
 }
-
