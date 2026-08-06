@@ -29,6 +29,7 @@ Without `ROSTER_PILOT_DEV_URL`, `pnpm desktop` loads the production files from `
 ```bash
 pnpm test
 pnpm build
+pnpm desktop:smoke
 ```
 
 The automated suite covers snake-pick math, flex-aware lineup optimization, conditional survival, recommendation scoring, Sleeper response normalization, retry behavior, filtering, and practice-pick roster updates.

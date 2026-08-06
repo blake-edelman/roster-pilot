@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('node:path');
 
 function createWindow() {
+  const smokeTest = process.argv.includes('--smoke-test');
   const window = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -18,7 +19,31 @@ function createWindow() {
     },
   });
 
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (!smokeTest) window.show();
+  });
+  window.webContents.once('did-finish-load', async () => {
+    if (!smokeTest) return;
+    try {
+      const state = await window.webContents.executeJavaScript(`({
+        title: document.title,
+        text: document.body.innerText,
+        stylesheets: document.styleSheets.length
+      })`);
+      const passed = state.title === 'Roster Pilot'
+        && state.text.includes('Recommended pilots')
+        && state.stylesheets > 0;
+      console.log(`${passed ? 'SMOKE_OK' : 'SMOKE_FAIL'} ${JSON.stringify(state)}`);
+      app.exit(passed ? 0 : 1);
+    } catch (error) {
+      console.error('SMOKE_FAIL', error);
+      app.exit(1);
+    }
+  });
+  window.webContents.on('did-fail-load', (_event, code, description, url) => {
+    console.error(`LOAD_FAILED ${code} ${description} ${url}`);
+    if (smokeTest) app.exit(1);
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) void shell.openExternal(url);
     return { action: 'deny' };
@@ -42,4 +67,3 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-
