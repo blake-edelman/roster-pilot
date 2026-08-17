@@ -29,4 +29,16 @@ describe('Roster Pilot dashboard', () => {
     expect(screen.getByLabelText('Sleeper draft ID')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Connect live draft' })).toBeDisabled();
   });
+
+  it('surfaces evidence-backed breakouts and filters dark horses', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Breakout radar' }));
+    expect(screen.getByRole('heading', { name: 'Breakout radar' })).toBeVisible();
+    expect(screen.getByText('Jaylen Waddle')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark horses' }));
+    const radar = screen.getByRole('heading', { name: 'Breakout radar' }).closest('.panel') as HTMLElement;
+    expect(within(radar).getByText('Zachariah Branch')).toBeVisible();
+    expect(within(radar).queryByText('Jaylen Waddle')).not.toBeInTheDocument();
+  });
 });

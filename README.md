@@ -18,6 +18,8 @@ pnpm dist:win
 - Flex-aware lineup optimization against position-level replacement players
 - Conditional ADP survival estimates for the next user pick
 - Explainable score components and player-specific draft guidance
+- Breakout Radar with opportunity, talent, role, age, offense, price, and contingent-upside signals
+- Separate breakout, dark-horse, value, and monitor classifications with evidence
 - Position filters, recent-pick context, roster tracking, and safe-to-wait callouts
 - Deterministic practice draft data with interactive pick submission
 - Responsive desktop and mobile layouts

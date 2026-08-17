@@ -5,8 +5,13 @@ import type { Player, Position } from './engine/types';
 import { ChevronDownIcon, ClockIcon, CompassIcon, RadioIcon, SparkIcon } from './components/Icons';
 import { SleeperDraftPoller } from './live/poller';
 import type { DraftBundle } from './adapters/sleeper';
+import { breakoutProfiles } from './data/breakoutProfiles';
+import { rankBreakoutCandidates } from './engine/breakout';
+import type { BreakoutLabel } from './engine/breakout';
 
 type Filter = 'ALL' | Position;
+type BoardView = 'DRAFT' | 'RADAR';
+type RadarFilter = 'ALL' | BreakoutLabel;
 
 const filters: Filter[] = ['ALL', 'RB', 'WR', 'QB', 'TE'];
 
@@ -32,6 +37,8 @@ export function App() {
   const [connectionState, setConnectionState] = useState<'mock' | 'connecting' | 'live' | 'error'>('mock');
   const [connectionMessage, setConnectionMessage] = useState('Practice data');
   const [leagueName, setLeagueName] = useState('Gridiron Masters');
+  const [boardView, setBoardView] = useState<BoardView>('DRAFT');
+  const [radarFilter, setRadarFilter] = useState<RadarFilter>('ALL');
   const pollerRef = useRef<SleeperDraftPoller | null>(null);
 
   useEffect(() => () => pollerRef.current?.stop(), []);
@@ -45,6 +52,14 @@ export function App() {
     ? recommendations
     : recommendations.filter(({ player }) => player.position === filter);
   const selected = recommendations.find(({ player }) => player.id === selectedId) ?? recommendations[0];
+  const breakoutCandidates = useMemo(
+    () => rankBreakoutCandidates(mockPlayers, breakoutProfiles, draftedIds),
+    [draftedIds],
+  );
+  const visibleBreakouts = radarFilter === 'ALL'
+    ? breakoutCandidates
+    : breakoutCandidates.filter((candidate) => candidate.label === radarFilter);
+  const selectedBreakout = breakoutCandidates.find((candidate) => candidate.player.id === selected?.player.id);
   const safestWait = recommendations
     .filter((item) => item.survivalProbability !== null)
     .sort((a, b) => (b.survivalProbability ?? 0) - (a.survivalProbability ?? 0))[0];
@@ -154,73 +169,90 @@ export function App() {
           <section className="board panel" aria-labelledby="recommendations-title">
             <div className="panel-header">
               <div>
-                <p className="section-kicker"><SparkIcon /> Decision board</p>
-                <h2 id="recommendations-title">Recommended pilots</h2>
+                <p className="section-kicker"><SparkIcon /> {boardView === 'DRAFT' ? 'Decision board' : 'Opportunity model'}</p>
+                <h2 id="recommendations-title">{boardView === 'DRAFT' ? 'Recommended pilots' : 'Breakout radar'}</h2>
               </div>
               <span className="data-freshness">Updated just now</span>
             </div>
 
-            <div className="filters" aria-label="Filter recommendations by position">
-              {filters.map((item) => (
-                <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>
-                  {item === 'ALL' ? 'All players' : item}
-                </button>
-              ))}
+            <div className="view-tabs" aria-label="Decision board view">
+              <button className={boardView === 'DRAFT' ? 'active' : ''} onClick={() => setBoardView('DRAFT')}>Draft board</button>
+              <button className={boardView === 'RADAR' ? 'active' : ''} onClick={() => { setBoardView('RADAR'); if (breakoutCandidates[0]) setSelectedId(breakoutCandidates[0].player.id); }}>Breakout radar</button>
             </div>
 
-            <div className="table-head" aria-hidden="true">
-              <span>Rank / player</span><span>Projected</span><span>Survives</span><span>Edge</span>
-            </div>
-            <div className="recommendation-list">
-              {visibleRecommendations.slice(0, 8).map((recommendation, index) => {
-                const { player, components, survivalProbability } = recommendation;
-                const isSelected = selected?.player.id === player.id;
-                return (
-                  <button
-                    className={`player-row ${isSelected ? 'player-row--selected' : ''}`}
-                    key={player.id}
-                    onClick={() => setSelectedId(player.id)}
-                    aria-pressed={isSelected}
-                  >
-                    <span className="rank">{String(index + 1).padStart(2, '0')}</span>
-                    <span className="player-main">
-                      <span className={positionClass(player.position)}>{player.position}</span>
-                      <span><strong>{player.name}</strong><small>{player.team} · Tier {player.tier ?? '—'} · ADP {player.adp?.toFixed(1) ?? '—'}</small></span>
-                    </span>
-                    <span className="metric"><strong>{player.projectedPoints}</strong><small>pts</small></span>
-                    <span className={`survival ${survivalProbability !== null && survivalProbability < .35 ? 'survival--low' : ''}`}>
-                      <strong>{survivalProbability === null ? '—' : `${Math.round(survivalProbability * 100)}%`}</strong>
-                      <small>{probabilityLabel(survivalProbability).split(' ')[1] ?? 'chance'}</small>
-                    </span>
-                    <span className="edge-score"><strong>+{recommendation.score.toFixed(1)}</strong><small>{components.lineupGain} lineup</small></span>
+            {boardView === 'DRAFT' ? <>
+              <div className="filters" aria-label="Filter recommendations by position">
+                {filters.map((item) => (
+                  <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>
+                    {item === 'ALL' ? 'All players' : item}
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+              <div className="table-head" aria-hidden="true">
+                <span>Rank / player</span><span>Projected</span><span>Survives</span><span>Edge</span>
+              </div>
+              <div className="recommendation-list">
+                {visibleRecommendations.slice(0, 8).map((recommendation, index) => {
+                  const { player, components, survivalProbability } = recommendation;
+                  const isSelected = selected?.player.id === player.id;
+                  return (
+                    <button className={`player-row ${isSelected ? 'player-row--selected' : ''}`} key={player.id} onClick={() => setSelectedId(player.id)} aria-pressed={isSelected}>
+                      <span className="rank">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="player-main"><span className={positionClass(player.position)}>{player.position}</span><span><strong>{player.name}</strong><small>{player.team} · Tier {player.tier ?? '—'} · ADP {player.adp?.toFixed(1) ?? '—'}</small></span></span>
+                      <span className="metric"><strong>{player.projectedPoints}</strong><small>pts</small></span>
+                      <span className={`survival ${survivalProbability !== null && survivalProbability < .35 ? 'survival--low' : ''}`}><strong>{survivalProbability === null ? '—' : `${Math.round(survivalProbability * 100)}%`}</strong><small>{probabilityLabel(survivalProbability).split(' ')[1] ?? 'chance'}</small></span>
+                      <span className="edge-score"><strong>+{recommendation.score.toFixed(1)}</strong><small>{components.lineupGain} lineup</small></span>
+                    </button>
+                  );
+                })}
+              </div>
+            </> : <>
+              <div className="filters radar-filters" aria-label="Filter breakout candidates">
+                {(['ALL', 'BREAKOUT', 'DARK_HORSE', 'VALUE'] as RadarFilter[]).map((item) => (
+                  <button key={item} className={radarFilter === item ? 'active' : ''} onClick={() => setRadarFilter(item)}>
+                    {item === 'ALL' ? 'All signals' : item === 'DARK_HORSE' ? 'Dark horses' : item.toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="radar-list">
+                {visibleBreakouts.map((candidate, index) => (
+                  <button className={`radar-row ${selected?.player.id === candidate.player.id ? 'radar-row--selected' : ''}`} key={candidate.player.id} onClick={() => setSelectedId(candidate.player.id)}>
+                    <span className="radar-rank">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="radar-player"><span className={positionClass(candidate.player.position)}>{candidate.player.position}</span><span><strong>{candidate.player.name}</strong><small>{candidate.player.team} · ADP {candidate.player.adp?.toFixed(1) ?? '—'}</small></span></span>
+                    <span className={`radar-label radar-label--${candidate.label.toLowerCase()}`}>{candidate.label.replace('_', ' ')}</span>
+                    <span className="radar-score"><strong>{candidate.label === 'DARK_HORSE' ? candidate.upsideScore : candidate.breakoutScore}</strong><small>{candidate.label === 'DARK_HORSE' ? 'upside' : 'breakout'}</small></span>
+                    <span className="radar-evidence">{candidate.evidence[0]}</span>
+                    <span className="signal-strip"><i style={{ width: `${candidate.signals.opportunity}%` }} /><small>Opportunity {candidate.signals.opportunity}</small></span>
+                  </button>
+                ))}
+              </div>
+            </>}
           </section>
 
           <aside className="decision-rail">
             {selected && (
               <section className="decision-card panel" aria-labelledby="selection-title">
-                <p className="section-kicker">Flight plan</p>
+                <p className="section-kicker">{boardView === 'RADAR' ? 'Radar contact' : 'Flight plan'}</p>
                 <div className="selection-title">
                   <span className={positionClass(selected.player.position)}>{selected.player.position}</span>
                   <div><h2 id="selection-title">{selected.player.name}</h2><p>{selected.player.team} · Projected {selected.player.projectedPoints} pts</p></div>
                 </div>
 
                 <div className="score-orbit">
-                  <div><strong>{selected.score.toFixed(1)}</strong><span>Roster Pilot edge</span></div>
-                  <p>{selected.reasons[0]}</p>
+                  <div><strong>{boardView === 'RADAR' && selectedBreakout ? selectedBreakout.breakoutScore : selected.score.toFixed(1)}</strong><span>{boardView === 'RADAR' ? 'breakout score' : 'Roster Pilot edge'}</span></div>
+                  <p>{boardView === 'RADAR' && selectedBreakout ? selectedBreakout.evidence[0] : selected.reasons[0]}</p>
                 </div>
 
-                <dl className="score-breakdown">
-                  <div><dt>Lineup gain</dt><dd>+{selected.components.lineupGain}</dd></div>
-                  <div><dt>Over replacement</dt><dd>+{selected.components.valueOverReplacement}</dd></div>
-                  <div><dt>Cost of waiting</dt><dd>+{selected.components.costOfWaiting}</dd></div>
-                  <div><dt>Roster fit</dt><dd>+{selected.components.rosterFit}</dd></div>
-                </dl>
+                {boardView === 'RADAR' && selectedBreakout ? <dl className="score-breakdown">
+                  <div><dt>Opportunity growth</dt><dd>{selectedBreakout.signals.opportunity}</dd></div>
+                  <div><dt>Underlying talent</dt><dd>{selectedBreakout.signals.talent}</dd></div>
+                  <div><dt>Role quality</dt><dd>{selectedBreakout.signals.roleQuality}</dd></div>
+                  <div><dt>Price discount</dt><dd>{selectedBreakout.signals.priceDiscount}</dd></div>
+                </dl> : <dl className="score-breakdown">
+                  <div><dt>Lineup gain</dt><dd>+{selected.components.lineupGain}</dd></div><div><dt>Over replacement</dt><dd>+{selected.components.valueOverReplacement}</dd></div><div><dt>Cost of waiting</dt><dd>+{selected.components.costOfWaiting}</dd></div><div><dt>Roster fit</dt><dd>+{selected.components.rosterFit}</dd></div>
+                </dl>}
 
-                <div className="insight"><SparkIcon /><p><strong>Pilot’s read</strong>{selected.reasons[1]} {selected.reasons[2]}</p></div>
+                <div className="insight"><SparkIcon /><p><strong>Pilot’s read</strong>{boardView === 'RADAR' && selectedBreakout ? selectedBreakout.evidence[1] : <>{selected.reasons[1]} {selected.reasons[2]}</>}</p></div>
                 <button className="draft-button" disabled={!isOnClock} onClick={() => draftPlayer(selected.player)}>
                   {isOnClock ? `Draft ${selected.player.name}` : 'Pick submitted'}
                 </button>

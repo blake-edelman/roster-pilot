@@ -29,6 +29,8 @@ export const mockPlayers: Player[] = [
   { id: 'cook', name: 'James Cook', position: 'RB', team: 'BUF', projectedPoints: 230, adp: 35.7, adpDeviation: 8.6, tier: 3 },
   { id: 'waddle', name: 'Jaylen Waddle', position: 'WR', team: 'MIA', projectedPoints: 228, adp: 38.2, adpDeviation: 9.1, tier: 3 },
   { id: 'laporta', name: 'Sam LaPorta', position: 'TE', team: 'DET', projectedPoints: 213, adp: 43.4, adpDeviation: 9.7, tier: 2 },
+  { id: 'tyson', name: 'Jordyn Tyson', position: 'WR', team: 'NO', projectedPoints: 198, adp: 72.8, adpDeviation: 13.4, tier: 4 },
+  { id: 'branch', name: 'Zachariah Branch', position: 'WR', team: 'ATL', projectedPoints: 164, adp: 112.6, adpDeviation: 18.2, tier: 5 },
 ];
 
 export const initialDraftedIds = new Set([
@@ -63,4 +65,3 @@ export const recentPicks = [
   { pick: 11, player: 'Drake London', position: 'WR', manager: 'Sunday Scaries' },
   { pick: 12, player: 'Nico Collins', position: 'WR', manager: 'The Waiver Wire' },
 ] as const;
-
